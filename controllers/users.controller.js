@@ -1,4 +1,6 @@
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const dotenv = require('dotenv');
 // Models
 const { User } = require('../models/user.model');
 const { Post } = require('../models/post.model');
@@ -8,6 +10,8 @@ const { Comment } = require('../models/comment.model');
 const { filterObj } = require('../util/filterObj');
 const { catchAsync } = require('../util/catchAsync');
 const { AppError } = require('../util/appError');
+
+dotenv.config({ path: './config.env' });
 
 // Get all users
 exports.getAllUsers = catchAsync(async (req, res, next) => {
@@ -67,7 +71,7 @@ exports.createNewUser = catchAsync(async (req, res) => {
   const newUser = await User.create({
     name,
     email,
-    password:  hashedpassword
+    password: hashedpassword
   });
 
   res.status(201).json({
@@ -84,10 +88,22 @@ exports.loginUsers = catchAsync(async (req, res, next) => {
   });
 
   //Compare entered password vs hashed password
-  if(!user || !(await bcrypt.compare(password, user.password))){
+  if (!user || !(await bcrypt.compare(password, user.password))) {
     return next(new AppError(400, 'Credentials are invalid'));
   }
+
+  const token = await jwt.sign({ id: user.id }, process.env.JWT - SECRET, {
+    expiresIN: process.env.JWT_EXPIRES_IN
+  });
+
   res.status(200).json({
     status: 'success'
   });
 });
+
+/*
+Generate creential that validates user session (token)
+  1. Validate session
+  2. Grant access a certain parts of our API
+  3. Restrict access
+*/
